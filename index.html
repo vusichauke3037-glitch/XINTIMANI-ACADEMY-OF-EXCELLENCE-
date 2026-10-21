@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xintimani - Textbook Manager</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial}
+body{background:#f4f6f9;color:#222}
+header{background:#0b2a4a;color:#fff;padding:10px 15px;display:flex;align-items:center;gap:12px}
+header img{height:40px;background:#fff;border-radius:50%;padding:2px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:15px}
+.card{background:#fff;padding:15px;border-radius:10px;box-shadow:0 2px 5px rgba(0,0,0,.1);text-align:center}
+.card b{font-size:20px;display:block;color:#0b2a4a}
+nav{display:flex;gap:8px;padding:0 15px;flex-wrap:wrap}
+nav button{padding:8px 14px;border:none;border-radius:20px;background:#ddd;cursor:pointer}
+nav button.active{background:#0b2a4a;color:#fff}
+section{padding:15px;display:none}
+section.active{display:block}
+.box{background:#fff;padding:15px;border-radius:10px;box-shadow:0 2px 5px rgba(0,0,0,.1);margin-bottom:15px}
+input,select{width:100%;padding:10px;margin:6px 0;border:1px solid #ccc;border-radius:6px}
+.btn{width:100%;padding:10px;background:#0b2a4a;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:8px}
+.btn.green{background:#1a7a3a} .btn.outline{background:#fff;color:#0b2a4a;border:1px solid #0b2a4a}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:8px;border-bottom:1px solid #eee;font-size:13px;text-align:left}
+.overdue{color:red;font-weight:bold}
+#reader{width:100%;display:none;margin-top:10px}
+</style>
+</head>
+<body>
+<header>
+<img src="logo.png" alt="Xintimani snail logo">
+<h1 style="font-size:17px">Xintimani Academy<br><small style="font-weight:400">Textbook Issuing & Retrieval</small></h1>
+</header>
+
+<div class="cards">
+<div class="card"><b id="tTotal">0</b>Total</div>
+<div class="card"><b id="tAvail">0</b>Available</div>
+<div class="card"><b id="tIssued">0</b>Issued</div>
+<div class="card"><b id="tOver">0</b>Overdue</div>
+</div>
+
+<nav>
+<button class="active" onclick="showTab('issue',this)">Issue / Return</button>
+<button onclick="showTab('books',this)">Books</button>
+<button onclick="showTab('learners',this)">Learners</button>
+<button onclick="showTab('history',this)">History</button>
+</nav>
+
+<section id="issue" class="active">
+<div class="box">
+<h3>Issue Textbook</h3>
+<select id="issueLearner"></select>
+<select id="issueBook"></select>
+<input type="date" id="issueDate"><input type="date" id="dueDate">
+<button class="btn" onclick="issueBook()">Issue Book</button>
+</div>
+<div class="box">
+<h3>Return / Retrieve - Scan or Search</h3>
+<input type="text" id="searchReturn" placeholder="Search learner or book..." onkeyup="renderIssued()">
+<table><thead><tr><th>Learner</th><th>Book</th><th>Due</th><th>Action</th></tr></thead><tbody id="issuedList"></tbody></table>
+</div>
+</section>
+
+<section id="books">
+<div class="box">
+<h3>Add Textbook</h3>
+<input id="bTitle" placeholder="Title e.g. Platinum Maths Gr 6">
+<input id="bSubject" placeholder="Subject">
+<input id="bGrade" placeholder="Grade">
+<input id="bQty" type="number" placeholder="Quantity">
+<div style="display:flex;gap:8px">
+<input id="bCode" placeholder="Book Code / ISBN - scan">
+<button onclick="startScan('bCode')" style="padding:10px">📷 Scan</button>
+</div>
+<div id="reader"></div>
+<button class="btn" onclick="addBook()">Add Book</button>
+</div>
+<div class="box">
+<table><thead><tr><th>Code</th><th>Title</th><th>Grade</th><th>Qty/Avail</th></tr></thead><tbody id="bookList"></tbody></table>
+</div>
+</section>
+
+<section id="learners">
+<div class="box">
+<h3>Add Learner</h3>
+<input id="lName" placeholder="Learner Name"><input id="lGrade" placeholder="Grade & Class e.g. 6A"><input id="lId" placeholder="Admission No">
+<button class="btn" onclick="addLearner()">Add Learner</button>
+</div>
+<div class="box"><table><thead><tr><th>ID</th><th>Name</th><th>Class</th></tr></thead><tbody id="learnerList"></tbody></table></div>
+</section>
+
+<section id="history">
+<div class="box">
+<button class="btn green" onclick="exportCSV()">Export CSV for Excel</button>
+<table><thead><tr><th>Date</th><th>Learner</th><th>Book</th><th>Status</th></tr></thead><tbody id="historyList"></tbody></table>
+</div>
+</section>
+
+<script>
+let books=JSON.parse(localStorage.getItem('xb_books')||'[]');
+let learners=JSON.parse(localStorage.getItem('xb_learners')||'[]');
+let transactions=JSON.parse(localStorage.getItem('xb_trans')||'[]');
+document.getElementById('issueDate').valueAsDate=new Date();
+let d=new Date();d.setDate(d.getDate()+14);document.getElementById('dueDate').valueAsDate=d;
+let html5Qr;
+function save(){localStorage.setItem('xb_books',JSON.stringify(books));localStorage.setItem('xb_learners',JSON.stringify(learners));localStorage.setItem('xb_trans',JSON.stringify(transactions));renderAll();}
+function showTab(id,el){document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');}
+function addBook(){let b={id:Date.now(),code:document.getElementById('bCode').value,title:document.getElementById('bTitle').value,subject:document.getElementById('bSubject').value,grade:document.getElementById('bGrade').value,qty:parseInt(document.getElementById('bQty').value)||0,avail:parseInt(document.getElementById('bQty').value)||0};if(!b.title||!b.qty)return alert('Fill title & qty');books.push(b);save();document.getElementById('bTitle').value='';document.getElementById('bCode').value='';}
+function addLearner(){let l={id:Date.now(),name:document.getElementById('lName').value,grade:document.getElementById('lGrade').value,adm:document.getElementById('lId').value};if(!l.name)return alert('Name required');learners.push(l);save();}
+function issueBook(){let li=document.getElementById('issueLearner').value;let bi=document.getElementById('issueBook').value;let learner=learners.find(x=>x.id==li);let book=books.find(x=>x.id==bi);if(!learner||!book)return alert('Select both');if(book.avail<=0)return alert('No copies');book.avail--;let tr={id:Date.now(),learner:learner.name,book:book.title,bookId:book.id,learnerId:learner.id,issueDate:document.getElementById('issueDate').value,dueDate:document.getElementById('dueDate').value,status:'ISSUED'};transactions.push(tr);save();}
+function returnBook(id){let tr=transactions.find(x=>x.id==id);tr.status='RETURNED';tr.returnDate=new Date().toISOString().slice(0,10);let book=books.find(b=>b.id==tr.bookId);if(book)book.avail++;save();}
+function renderAll(){let avail=books.reduce((a,b)=>a+b.avail,0);document.getElementById('tTotal').innerText=books.length;document.getElementById('tAvail').innerText=avail;document.getElementById('tIssued').innerText=transactions.filter(t=>t.status=='ISSUED').length;document.getElementById('tOver').innerText=transactions.filter(t=>t.status=='ISSUED'&&new Date(t.dueDate)<new Date()).length;document.getElementById('bookList').innerHTML=books.map(b=>`<tr><td>${b.code}</td><td>${b.title}</td><td>${b.grade}</td><td>${b.qty}/${b.avail}</td></tr>`).join('');document.getElementById('learnerList').innerHTML=learners.map(l=>`<tr><td>${l.adm}</td><td>${l.name}</td><td>${l.grade}</td></tr>`).join('');document.getElementById('issueLearner').innerHTML=learners.map(l=>`<option value="${l.id}">${l.name} - ${l.grade}</option>`).join('');document.getElementById('issueBook').innerHTML=books.map(b=>`<option value="${b.id}">${b.title} (${b.avail})</option>`).join('');renderIssued();document.getElementById('historyList').innerHTML=transactions.slice().reverse().map(t=>`<tr><td>${t.issueDate}</td><td>${t.learner}</td><td>${t.book}</td><td>${t.status}</td></tr>`).join('');}
+function renderIssued(){let q=document.getElementById('searchReturn').value.toLowerCase();let list=transactions.filter(t=>t.status=='ISSUED'&&(t.learner.toLowerCase().includes(q)||t.book.toLowerCase().includes(q)));document.getElementById('issuedList').innerHTML=list.map(t=>`<tr class="${new Date(t.dueDate)<new Date()?'overdue':''}"><td>${t.learner}</td><td>${t.book}</td><td>${t.dueDate}</td><td><button onclick="returnBook(${t.id})">Return</button></td></tr>`).join('');}
+function exportCSV(){let csv="Date,Learner,Book,Due,Status\n"+transactions.map(t=>`${t.issueDate},${t.learner},${t.book},${t.dueDate},${t.status}`).join('\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='Xintimani_Books.csv';a.click();}
+function startScan(targetId){let r=document.getElementById('reader');r.style.display='block';if(!html5Qr)html5Qr=new Html5Qrcode("reader");html5Qr.start({facingMode:"environment"},{fps:10,qrbox:250},(decoded)=>{document.getElementById(targetId).value=decoded;html5Qr.stop();r.style.display='none';},{})}
+renderAll();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
+</script>
+</body>
+                                                                         </html>
