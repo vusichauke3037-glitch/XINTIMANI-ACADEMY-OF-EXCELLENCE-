@@ -4,40 +4,8 @@
 <div id="loginPage"><div class="loginBox"><img src="logo.png"><h2>Xintimani V9</h2><p style="font-size:12px;color:#666;margin:6px 0 12px">Cloud Sync - All devices update instantly</p><input id="loginUser" placeholder="Username"><input type="password" id="loginPass" placeholder="Password"><button class="btn" onclick="doLogin()">Login</button><p style="font-size:11px;margin-top:12px;color:#666">coordinator / Xintimani2026<br>educator / educator123</p><p id="loginError" style="color:red;font-size:12px;margin-top:8px"></p><button id="installBtnLogin" class="btn install" style="margin-top:12px">📲 Install App on this device</button></div></div>
 <div id="returnModal"><div class="modal"><h3>Return Book - Condition</h3><p id="returnInfo" style="font-size:13px;margin:8px 0"></p><select id="returnCondition" onchange="onConditionChange()"><option value="Good">Good - Can be re-issued</option><option value="Damaged">Damaged - Needs repair</option><option value="Lost">Lost - Must pay/replace</option></select><div id="damageBox" style="display:none"><textarea id="damageNotes" placeholder="Describe damage"></textarea><input id="damageFee" type="number" placeholder="Fee e.g. 50"></div><button class="btn" onclick="confirmReturn()">Confirm Return</button><button class="btn" style="background:#ddd;color:#333" onclick="closeReturnModal()">Cancel</button></div></div>
 <div id="app"><header><img src="logo.png"><div><h1 style="font-size:15px">Xintimani V9</h1><small id="welcomeUser">Welcome</small></div><button id="installBtn" class="btn install" style="width:auto;padding:6px 12px;margin-left:10px">📲 Install</button><button class="btn" style="width:auto;margin-left:auto;padding:8px 12px;background:#b42318" onclick="doLogout()">Logout</button></header>
-<!-- rest same as V8.1 -->
-<script type="module">
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
-const firebaseConfig = {
-  apiKey: "AIzaSyBOO3N0FFOIYj3QAwqM1HEIDlu9zZLLVHQ",
-  authDomain: "xintimani-academy.firebaseapp.com",
-  projectId: "xintimani-academy",
-  storageBucket: "xintimani-academy.firebasestorage.app",
-  messagingSenderId: "149830775344",
-  appId: "1:149830775344:web:2758c500bc1bbd4099f3f5",
-  measurementId: "G-K9XWRNBCQB"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-let books = [], learners = [], transactions = [], educators = [], currentUser = null, pendingReturnId = null;
-if (localStorage.getItem('xb_current_user')) { showApp(); }
-function doLogin() { /* same as V8.1 */ }
-function doLogout() { /* same as V8.1 */ }
-function showApp() { 
-  document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  currentUser = JSON.parse(localStorage.getItem('xb_current_user'));
-  document.getElementById('welcomeUser').innerText = 'Welcome, ' + currentUser.username;
-  syncFromCloud();
-}
-function syncFromCloud() {
-  onSnapshot(collection(db, 'books'), (snapshot) => { books = snapshot.docs.map(d => ({id: d.id, ...d.data()})); renderAll(); });
-  onSnapshot(collection(db, 'learners'), (snapshot) => { learners = snapshot.docs.map(d => ({id: d.id, ...d.data()})); renderAll(); });
-  onSnapshot(collection(db, 'transactions'), (snapshot) => { transactions = snapshot.docs.map(d => ({id: d.id, ...d.data()})); renderAll(); });
-  onSnapshot(collection(db, 'educators'), (snapshot) => { educators = snapshot.docs.map(d => ({id: d.id, ...d.data()})); renderAll(); });
-}
-async function addBook() {
-  let title = document.getElementById('bTitle').value.trim();
-  if (!title) return alert('Title');
-  await addDoc(collection(db, 'books'), {
-    copyNo: document.getElementById('b
+<div class="role-bar"><span id="roleInfo">Role</span><select id="filterSubject" style="width:auto;margin-left:auto;display:none" onchange="renderAll()"><option value="">All Subjects</option></select></div>
+<div class="cards"><div class="card"><b id="tTotal">0</b>Titles</div><div class="card"><b id="tAvail">0</b>Avail</div><div class="card"><b id="tIssued">0</b>Issued</div><div class="card warn"><b id="tDamaged">0</b>Damaged</div><div class="card bad"><b id="tLost">0</b>Lost</div></div>
+<nav><button class="active" onclick="showTab('issue',this)">Issue / Return</button><button onclick="showTab('books',this)">Books</button><button onclick="showTab('learners',this)">Learners</button><button onclick="showTab('educators',this)">Educators</button><button onclick="showTab('history',this)">History</button><button onclick="showTab('damaged',this)">Damaged/Lost</button><button id="settingsTabBtn" onclick="showTab('settings',this)">Settings</button></nav>
+<section id="issue" class="active"><div class="box"><h3>Issue Book</h3><select id="issueLearner"></select><select id="issueBook" onchange="onBookChange()"></select><select id="issueCopy"><option value="">Select Book First</option></select><div style="display:flex;gap:6px"><input id="issueCopyManual" placeholder="Or scan/type textbook number"><button onclick="startScan('issueCopyManual')" style="padding:10px;border-radius:8px">Scan</button></div><input type="date" id="issueDate"><input type="date" id="dueDate"><button class="btn" onclick="issueBook()">Issue Selected Copy</button></div><div class="box"><h3>Return - Search by Textbook Number</h3><input id="searchReturn" placeholder="Search learner, book, OR textbook number..." onkeyup="renderIssued()"><table><thead><tr><th>Copy No</th><th>Learner</th><th>Book</th><th>Due</th><th>By</th><th></th></tr></thead><tbody id="issuedList"></tbody></table></div></section>
+<section id="books"><div class="box"><h3>Add Textbook with Numbers</h
