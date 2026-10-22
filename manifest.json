@@ -1,25 +1,14 @@
 {
-  "name": "Xintimani Academy V6",
+  "name": "Xintimani Library",
   "short_name": "Xintimani",
-  "description": "Textbook Issuing & Retrieval - Coordinator & Educators",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b2a4a",
   "theme_color": "#0b2a4a",
   "icons": [
     {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/29/29302.png",
       "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "logo.png",
-      "sizes": "192x192",
       "type": "image/png"
     }
   ]
